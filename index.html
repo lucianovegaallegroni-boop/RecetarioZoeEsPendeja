@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inventario de Esencias Nobles - El Almacén de Esencias</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Outfit:wght@300;400;500;600&family=Homemade+Apple&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "cream": "#FCF9F3",
+              "sage": "#94A684",
+              "terracotta": "#C88E75",
+              "stone": "#4A4543",
+              "blush": "#F3E4D8",
+              "sepia": "#E8DED1",
+            },
+            fontFamily: {
+              "serif": ["Playfair Display", "serif"],
+              "sans": ["Outfit", "sans-serif"],
+              "handwriting": ["Homemade Apple", "cursive"]
+            },
+          },
+        },
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
