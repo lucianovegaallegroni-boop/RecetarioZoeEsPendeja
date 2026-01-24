@@ -1,21 +1,18 @@
-import { useState } from 'react';
 import './index.css';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import HomePage from './HomePage';
 import RecipeDetail from './RecipeDetail';
-
 import IngredientsCatalog from './IngredientsCatalog';
 
-type ViewState = 'home' | 'detail' | 'ingredients';
-
 function App() {
-  const [view, setView] = useState<ViewState>('home');
-
   return (
-    <>
-      {view === 'home' && <HomePage onNavigate={(v) => setView(v)} />}
-      {view === 'detail' && <RecipeDetail onBack={() => setView('home')} />}
-      {view === 'ingredients' && <IngredientsCatalog onBack={() => setView('home')} onNavigate={(v) => setView(v)} />}
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/receta/:id" element={<RecipeDetail />} />
+        <Route path="/materiaprima" element={<IngredientsCatalog />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

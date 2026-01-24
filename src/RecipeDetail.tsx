@@ -1,20 +1,19 @@
-interface RecipeDetailProps {
-    onBack: () => void;
-}
+import { Link, useNavigate } from 'react-router-dom';
 
-export default function RecipeDetail({ onBack }: RecipeDetailProps) {
+export default function RecipeDetail() {
+    const navigate = useNavigate();
+
     return (
         <div className="min-h-screen selection:bg-terracotta/20">
             <header className="w-full px-8 py-6 flex justify-between items-center border-b border-terracotta/10 bg-cream/80 backdrop-blur-md sticky top-0 z-50">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
+                <Link to="/" className="flex items-center gap-2 cursor-pointer">
                     <span className="material-symbols-outlined text-terracotta text-3xl">restaurant_menu</span>
                     <h1 className="text-2xl font-black tracking-tight text-stone">Zoe es <span className="text-terracotta italic">Pendeja</span></h1>
-                </div>
+                </Link>
                 <nav className="hidden md:flex items-center gap-12 font-sans text-sm uppercase tracking-[0.2em] font-medium text-stone/70">
-                    <a className="hover:text-terracotta transition-colors" href="#" onClick={onBack}>Inicio</a>
-                    <a className="text-terracotta border-b border-terracotta" href="#">Recetas</a>
+                    <Link to="/" className="text-terracotta border-b border-terracotta">Recetas</Link>
                     <a className="hover:text-terracotta transition-colors" href="#">Precios</a>
-                    <a className="hover:text-terracotta transition-colors" href="#">Materia Prima</a>
+                    <Link to="/materiaprima" className="hover:text-terracotta transition-colors">Materia Prima</Link>
                 </nav>
                 <div className="flex items-center gap-6">
                     <button className="flex items-center gap-2 px-6 py-2.5 bg-terracotta text-white rounded-full hover:bg-terracotta/90 transition-all shadow-lg shadow-terracotta/20 text-sm font-semibold tracking-wide">
@@ -30,7 +29,7 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
             <main className="max-w-[1400px] mx-auto px-4 md:px-12 py-12">
                 <section className="relative w-full mb-20">
                     {/* Back Button for better UX */}
-                    <button onClick={onBack} className="absolute top-4 left-4 z-10 bg-white/80 p-2 rounded-full hover:bg-white text-stone transition-all">
+                    <button onClick={() => navigate('/')} className="absolute top-4 left-4 z-10 bg-white/80 p-2 rounded-full hover:bg-white text-stone transition-all">
                         <span className="material-symbols-outlined">arrow_back</span>
                     </button>
 
