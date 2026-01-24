@@ -1,9 +1,8 @@
 interface RecipeDetailProps {
     onBack: () => void;
-    onNavigate: (view: any) => void;
 }
 
-export default function RecipeDetail({ onBack, onNavigate }: RecipeDetailProps) {
+export default function RecipeDetail({ onBack }: RecipeDetailProps) {
     return (
         <div className="min-h-screen selection:bg-terracotta/20">
             <header className="w-full px-8 py-6 flex justify-between items-center border-b border-terracotta/10 bg-cream/80 backdrop-blur-md sticky top-0 z-50">

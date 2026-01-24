@@ -60,10 +60,11 @@ const INITIAL_INGREDIENTS: Ingredient[] = [
 ];
 
 interface IngredientsCatalogProps {
+    onBack: () => void;
     onNavigate: (view: any) => void; // Using any for now to be flexible with ViewState
 }
 
-export default function IngredientsCatalog({ onNavigate }: IngredientsCatalogProps) {
+export default function IngredientsCatalog({ onBack, onNavigate }: IngredientsCatalogProps) {
     const [ingredients, setIngredients] = useState<Ingredient[]>(INITIAL_INGREDIENTS);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [filter, setFilter] = useState('Todos');
@@ -115,7 +116,7 @@ export default function IngredientsCatalog({ onNavigate }: IngredientsCatalogPro
         <div className="min-h-screen selection:bg-terracotta/20 bg-[#FCF9F3]">
             {/* Header - Consistent with others */}
             <header className="w-full px-8 py-6 flex justify-between items-center border-b border-terracotta/10 bg-cream/80 backdrop-blur-md sticky top-0 z-50">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => onNavigate('home')}>
+                <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
                     <span className="material-symbols-outlined text-terracotta text-3xl">restaurant_menu</span>
                     <h1 className="text-2xl font-black tracking-tight text-stone">Zoe es <span className="text-terracotta italic">Pendeja</span></h1>
                 </div>

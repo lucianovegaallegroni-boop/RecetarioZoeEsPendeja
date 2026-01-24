@@ -13,7 +13,7 @@ function App() {
   return (
     <>
       {view === 'home' && <HomePage onNavigate={(v) => setView(v)} />}
-      {view === 'detail' && <RecipeDetail onBack={() => setView('home')} onNavigate={(v) => setView(v)} />}
+      {view === 'detail' && <RecipeDetail onBack={() => setView('home')} />}
       {view === 'ingredients' && <IngredientsCatalog onBack={() => setView('home')} onNavigate={(v) => setView(v)} />}
     </>
   );
