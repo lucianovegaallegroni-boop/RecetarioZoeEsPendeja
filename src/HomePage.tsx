@@ -1,22 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getIngredients, createRecipe, getRecipes } from './lib/api';
-import type { Ingredient, Recipe } from './lib/database.types';
-
-const UNIT_OPTIONS = ['kg', 'g', 'L', 'ml', 'un'];
-
-interface RecipeIngredient {
-    ingredientId: string;
-    quantity: string;
-    unit: string;
-}
+import { createRecipe, getRecipes } from './lib/api';
+import type { Recipe } from './lib/database.types';
+import RecipeModal from './components/RecipeModal';
 
 export default function HomePage() {
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [recipes, setRecipes] = useState<Recipe[]>([]);
-    const [availableIngredients, setAvailableIngredients] = useState<Ingredient[]>([]);
-    const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
 
     // Fetch recipes state
     const [itemsPerPage] = useState(5);
@@ -31,8 +22,6 @@ export default function HomePage() {
     // Initial fetch
     useEffect(() => {
         fetchRecipes();
-        fetchIngredients();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const fetchRecipes = async () => {
@@ -44,129 +33,28 @@ export default function HomePage() {
         }
     };
 
-    const fetchIngredients = async () => {
-        try {
-            setIsLoadingIngredients(true);
-            const data = await getIngredients();
-            setAvailableIngredients(data);
-        } catch (err) {
-            console.error('Error fetching ingredients:', err);
-        } finally {
-            setIsLoadingIngredients(false);
-        }
-    };
+    const handleCreateRecipe = async (data: {
+        name: string;
+        description: string;
+        image: string;
+        ingredients: { ingredientId: string; quantity: string; unit: string }[];
+        steps: string[];
+    }) => {
+        const recipeData = {
+            name: data.name,
+            description: data.description,
+            image: data.image,
+        };
 
-    // Helper functions re-added since they were seemingly removed in previous chunk replacement
-    const handleAddIngredient = () => {
-        if (newIngredient.ingredientId && newIngredient.quantity) {
-            setSelectedIngredients([...selectedIngredients, { ...newIngredient }]);
-            setNewIngredient({ ingredientId: '', quantity: '', unit: 'kg' });
-        }
-    };
+        const recipeIngredients = data.ingredients.map(ing => ({
+            ingredient_id: ing.ingredientId,
+            quantity: parseFloat(ing.quantity),
+            unit: ing.unit
+        }));
 
-    const handleRemoveIngredient = (index: number) => {
-        setSelectedIngredients(selectedIngredients.filter((_, i) => i !== index));
-    };
-
-    const handleAddStep = () => {
-        if (newStep.trim()) {
-            setSteps([...steps, newStep.trim()]);
-            setNewStep('');
-        }
-    };
-
-    const handleRemoveStep = (index: number) => {
-        setSteps(steps.filter((_, i) => i !== index));
-        if (editingStepIndex === index) {
-            setEditingStepIndex(null);
-        }
-    };
-
-    const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
-    const [editingStepValue, setEditingStepValue] = useState('');
-
-    const handleStartEditStep = (index: number) => {
-        setEditingStepIndex(index);
-        setEditingStepValue(steps[index]);
-    };
-
-    const handleSaveEditStep = () => {
-        if (editingStepIndex !== null && editingStepValue.trim()) {
-            const newSteps = [...steps];
-            newSteps[editingStepIndex] = editingStepValue.trim();
-            setSteps(newSteps);
-            setEditingStepIndex(null);
-            setEditingStepValue('');
-        }
-    };
-
-    const handleCancelEditStep = () => {
-        setEditingStepIndex(null);
-        setEditingStepValue('');
-    };
-
-    // Recipe form state
-    const [recipeName, setRecipeName] = useState('');
-    const [recipeDescription, setRecipeDescription] = useState('');
-    const [recipeImage, setRecipeImage] = useState('');
-    const [selectedIngredients, setSelectedIngredients] = useState<RecipeIngredient[]>([]);
-    const [steps, setSteps] = useState<string[]>([]);
-    const [newStep, setNewStep] = useState('');
-    const [newIngredient, setNewIngredient] = useState<RecipeIngredient>({
-        ingredientId: '',
-        quantity: '',
-        unit: 'kg'
-    });
-
-
-
-
-
-    const handleSaveRecipe = async () => {
-        try {
-            if (!recipeName) return;
-
-            const recipeData = {
-                name: recipeName,
-                description: recipeDescription,
-                image: recipeImage,
-            };
-
-            const recipeIngredients = selectedIngredients.map(ing => ({
-                ingredient_id: ing.ingredientId,
-                quantity: parseFloat(ing.quantity), // Convert string to number
-                unit: ing.unit
-            }));
-
-            await createRecipe(recipeData, recipeIngredients, steps);
-
-            // Close modal and reset form
-            closeModal();
-
-            // Optionally refresh the recipes list if we display them
-            await fetchRecipes();
-            alert('¡Receta guardada con éxito!');
-        } catch (error) {
-            console.error('Error saving recipe:', error);
-            alert('Hubo un error al guardar la receta. Por favor intenta de nuevo.');
-        }
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setRecipeName('');
-        setRecipeDescription('');
-        setRecipeImage('');
-        setSelectedIngredients([]);
-        setSteps([]);
-        setNewStep('');
-        setNewIngredient({ ingredientId: '', quantity: '', unit: 'kg' });
-        setEditingStepIndex(null);
-        setEditingStepValue('');
-    };
-
-    const getIngredientName = (id: string) => {
-        return availableIngredients.find(i => i.id === id)?.name || '';
+        await createRecipe(recipeData, recipeIngredients, data.steps);
+        await fetchRecipes();
+        alert('¡Receta guardada con éxito!');
     };
 
     return (
@@ -412,234 +300,11 @@ export default function HomePage() {
             </footer>
 
             {/* New Recipe Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-                    <div className="absolute inset-0 bg-stone/60 backdrop-blur-sm" onClick={closeModal}></div>
-                    <div className="bg-[#FCF9F3] w-full max-w-2xl rounded-[2rem] shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]">
-                        {/* Modal Header */}
-                        <div className="p-8 border-b border-stone/10 bg-white">
-                            <h3 className="font-serif text-2xl font-bold italic text-stone">Nueva Receta Artesanal</h3>
-                            <p className="text-sm text-stone/50 mt-1">Crea una nueva obra maestra culinaria.</p>
-                            <button onClick={closeModal} className="absolute top-6 right-6 text-stone/40 hover:text-terracotta transition-colors">
-                                <span className="material-symbols-outlined">close</span>
-                            </button>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div className="p-8 overflow-y-auto space-y-6">
-                            {/* Recipe Name */}
-                            <div>
-                                <label className="block text-xs font-bold tracking-widest uppercase text-stone/40 mb-2">Nombre de la Receta</label>
-                                <input
-                                    type="text"
-                                    className="w-full bg-white border border-stone/20 rounded-xl px-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif"
-                                    placeholder="Ej. Tarta de Queso Vasca"
-                                    value={recipeName}
-                                    onChange={(e) => setRecipeName(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Description */}
-                            <div>
-                                <label className="block text-xs font-bold tracking-widest uppercase text-stone/40 mb-2">Descripción</label>
-                                <textarea
-                                    className="w-full bg-white border border-stone/20 rounded-xl px-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif resize-none h-20"
-                                    placeholder="Una breve descripción de la receta..."
-                                    value={recipeDescription}
-                                    onChange={(e) => setRecipeDescription(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Image URL */}
-                            <div>
-                                <label className="block text-xs font-bold tracking-widest uppercase text-stone/40 mb-2">URL de la Imagen (Opcional)</label>
-                                <input
-                                    type="url"
-                                    className="w-full bg-white border border-stone/20 rounded-xl px-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif"
-                                    placeholder="https://ejemplo.com/foto.jpg"
-                                    value={recipeImage}
-                                    onChange={(e) => setRecipeImage(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Ingredients Section */}
-                            <div className="bg-sage/10 p-6 rounded-2xl border border-dashed border-sage/30">
-                                <h4 className="font-serif font-bold italic text-sage mb-4 flex items-center gap-2">
-                                    <span className="material-symbols-outlined">inventory_2</span>
-                                    Ingredientes
-                                </h4>
-
-                                {/* Selected Ingredients List */}
-                                {selectedIngredients.length > 0 && (
-                                    <div className="space-y-2 mb-4">
-                                        {selectedIngredients.map((ing, index) => (
-                                            <div key={index} className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-sage/20">
-                                                <div className="flex items-center gap-4">
-                                                    <span className="text-sm font-bold text-stone">{index + 1}.</span>
-                                                    <span className="font-serif text-stone">{getIngredientName(ing.ingredientId)}</span>
-                                                    <span className="text-stone/60">{ing.quantity} {ing.unit}</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleRemoveIngredient(index)}
-                                                    className="text-terracotta/60 hover:text-terracotta transition-colors"
-                                                >
-                                                    <span className="material-symbols-outlined text-sm">close</span>
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Add Ingredient Form */}
-                                <div className="flex gap-2 items-end">
-                                    <div className="flex-1">
-                                        <label className="block text-[10px] font-bold tracking-widest uppercase text-stone/40 mb-1">Materia Prima</label>
-                                        <select
-                                            className="w-full bg-white border border-stone/20 rounded-xl px-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif"
-                                            value={newIngredient.ingredientId}
-                                            onChange={(e) => setNewIngredient({ ...newIngredient, ingredientId: e.target.value })}
-                                            disabled={isLoadingIngredients}
-                                        >
-                                            <option value="">{isLoadingIngredients ? 'Cargando...' : 'Seleccionar...'}</option>
-                                            {availableIngredients.map(ing => (
-                                                <option key={ing.id} value={ing.id}>{ing.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="w-24">
-                                        <label className="block text-[10px] font-bold tracking-widest uppercase text-stone/40 mb-1">Cantidad</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            className="w-full bg-white border border-stone/20 rounded-xl px-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif"
-                                            placeholder="0"
-                                            value={newIngredient.quantity}
-                                            onChange={(e) => setNewIngredient({ ...newIngredient, quantity: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="w-20">
-                                        <label className="block text-[10px] font-bold tracking-widest uppercase text-stone/40 mb-1">Unidad</label>
-                                        <select
-                                            className="w-full bg-white border border-stone/20 rounded-xl px-2 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif text-sm"
-                                            value={newIngredient.unit}
-                                            onChange={(e) => setNewIngredient({ ...newIngredient, unit: e.target.value })}
-                                        >
-                                            {UNIT_OPTIONS.map(unit => (
-                                                <option key={unit} value={unit}>{unit}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <button
-                                        onClick={handleAddIngredient}
-                                        className="p-3 bg-sage text-white rounded-xl hover:bg-sage/90 transition-colors"
-                                        title="Agregar ingrediente"
-                                    >
-                                        <span className="material-symbols-outlined">add</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Steps Section */}
-                            <div className="bg-terracotta/5 p-6 rounded-2xl border border-dashed border-terracotta/20">
-                                <h4 className="font-serif font-bold italic text-terracotta mb-4 flex items-center gap-2">
-                                    <span className="material-symbols-outlined">format_list_numbered</span>
-                                    Pasos de Preparación
-                                </h4>
-
-                                {/* Steps List */}
-                                {steps.length > 0 && (
-                                    <div className="space-y-2 mb-4">
-                                        {steps.map((step, index) => (
-                                            <div key={index} className="flex items-start gap-3 bg-white px-4 py-3 rounded-xl border border-terracotta/10">
-                                                <span className="flex-shrink-0 size-7 bg-terracotta text-white rounded-full flex items-center justify-center font-serif text-sm font-bold">
-                                                    {index + 1}
-                                                </span>
-                                                {editingStepIndex === index ? (
-                                                    <>
-                                                        <input
-                                                            type="text"
-                                                            className="flex-1 bg-cream border border-terracotta/30 rounded-lg px-3 py-1 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif text-sm"
-                                                            value={editingStepValue}
-                                                            onChange={(e) => setEditingStepValue(e.target.value)}
-                                                            onKeyPress={(e) => e.key === 'Enter' && handleSaveEditStep()}
-                                                            autoFocus
-                                                        />
-                                                        <button
-                                                            onClick={handleSaveEditStep}
-                                                            className="flex-shrink-0 text-sage hover:text-sage/80 transition-colors"
-                                                            title="Guardar"
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm">check</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={handleCancelEditStep}
-                                                            className="flex-shrink-0 text-terracotta/60 hover:text-terracotta transition-colors"
-                                                            title="Cancelar"
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm">close</span>
-                                                        </button>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <p className="flex-1 font-serif text-stone text-sm pt-0.5">{step}</p>
-                                                        <button
-                                                            onClick={() => handleStartEditStep(index)}
-                                                            className="flex-shrink-0 text-stone/40 hover:text-terracotta transition-colors"
-                                                            title="Editar paso"
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm">edit</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleRemoveStep(index)}
-                                                            className="flex-shrink-0 text-terracotta/60 hover:text-terracotta transition-colors"
-                                                            title="Eliminar paso"
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm">close</span>
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Add Step Form */}
-                                <div className="flex gap-2">
-                                    <div className="flex-shrink-0 size-7 bg-terracotta/20 text-terracotta rounded-full flex items-center justify-center font-serif text-sm font-bold">
-                                        {steps.length + 1}
-                                    </div>
-                                    <input
-                                        type="text"
-                                        className="flex-1 bg-white border border-stone/20 rounded-xl px-4 py-2 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif text-sm"
-                                        placeholder="Escribe el siguiente paso..."
-                                        value={newStep}
-                                        onChange={(e) => setNewStep(e.target.value)}
-                                        onKeyPress={(e) => e.key === 'Enter' && handleAddStep()}
-                                    />
-                                    <button
-                                        onClick={handleAddStep}
-                                        className="p-2 bg-terracotta text-white rounded-xl hover:bg-terracotta/90 transition-colors"
-                                        title="Agregar paso"
-                                    >
-                                        <span className="material-symbols-outlined">add</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div className="p-6 border-t border-stone/10 bg-white">
-                            <button
-                                onClick={handleSaveRecipe}
-                                disabled={!recipeName || selectedIngredients.length === 0 || steps.length === 0}
-                                className="w-full bg-stone text-white py-4 rounded-xl font-bold tracking-[0.2em] uppercase hover:bg-stone/90 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Guardar Receta
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <RecipeModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSave={handleCreateRecipe}
+            />
         </div>
     )
 }

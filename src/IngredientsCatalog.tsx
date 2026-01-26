@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getIngredients, createIngredient, updateIngredient, deleteIngredient } from './lib/api';
 import type { Ingredient } from './lib/database.types';
+import { UNITS, calculateStandardCost, getUnitType } from './lib/conversions';
 
 export default function IngredientsCatalog() {
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -21,9 +22,9 @@ export default function IngredientsCatalog() {
         category: 'Harinas',
         vendor: '',
         image: '',
-        totalPrice: '',
-        totalQuantity: '',
-        quantityUnit: 'kg'
+        purchasePrice: '',
+        purchaseQuantity: '',
+        purchaseUnit: 'kg'
     });
 
     // Fetch ingredients on mount
@@ -52,55 +53,60 @@ export default function IngredientsCatalog() {
             category: ing.category,
             vendor: ing.vendor,
             image: ing.image || '',
-            totalPrice: ing.price.toString(),
-            totalQuantity: '1',
-            quantityUnit: ing.unit
+            purchasePrice: (ing.purchase_price || ing.price).toString(),
+            purchaseQuantity: (ing.purchase_quantity || 1).toString(),
+            purchaseUnit: ing.purchase_unit || ing.unit
         });
         setIsModalOpen(true);
     };
 
     const openCreateModal = () => {
         setEditingIngredient(null);
-        setNewIng({ name: '', category: 'Harinas', vendor: '', image: '', totalPrice: '', totalQuantity: '', quantityUnit: 'kg' });
+        setNewIng({ name: '', category: 'Harinas', vendor: '', image: '', purchasePrice: '', purchaseQuantity: '', purchaseUnit: 'kg' });
         setIsModalOpen(true);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
         setEditingIngredient(null);
-        setNewIng({ name: '', category: 'Harinas', vendor: '', image: '', totalPrice: '', totalQuantity: '', quantityUnit: 'kg' });
+        setNewIng({ name: '', category: 'Harinas', vendor: '', image: '', purchasePrice: '', purchaseQuantity: '', purchaseUnit: 'kg' });
     };
 
     const categories = ['Todos', 'Harinas', 'Lácteos', 'Especias', 'Chocolates', 'Frutas'];
 
     const handleSaveIngredient = async (e: React.FormEvent) => {
         e.preventDefault();
-        const price = parseFloat(newIng.totalPrice);
-        const qty = parseFloat(newIng.totalQuantity);
+        const pPrice = parseFloat(newIng.purchasePrice);
+        const pQty = parseFloat(newIng.purchaseQuantity);
 
-        if (isNaN(price) || isNaN(qty) || qty === 0) return;
+        if (isNaN(pPrice) || isNaN(pQty) || pQty === 0) return;
 
-        const pricePerUnit = price / qty;
+        const standardizedCost = calculateStandardCost(pPrice, pQty, newIng.purchaseUnit);
+        let baseUnit = 'kg';
+        const type = getUnitType(newIng.purchaseUnit);
+        if (type === 'volume') baseUnit = 'L';
+        if (type === 'count') baseUnit = 'un';
 
         try {
+            const ingredientData = {
+                name: newIng.name,
+                category: newIng.category,
+                vendor: newIng.vendor,
+                price: standardizedCost, // Store Standard Cost
+                unit: baseUnit,          // Standard Unit
+                purchase_price: pPrice,
+                purchase_quantity: pQty,
+                purchase_unit: newIng.purchaseUnit,
+                image: newIng.image || undefined
+            };
+
             if (editingIngredient) {
                 // Update existing ingredient
-                await updateIngredient(editingIngredient.id, {
-                    name: newIng.name,
-                    category: newIng.category,
-                    vendor: newIng.vendor,
-                    price: pricePerUnit,
-                    unit: newIng.quantityUnit,
-                    image: newIng.image || undefined
-                });
+                await updateIngredient(editingIngredient.id, ingredientData);
             } else {
                 // Create new ingredient
                 await createIngredient({
-                    name: newIng.name,
-                    category: newIng.category,
-                    vendor: newIng.vendor,
-                    price: pricePerUnit,
-                    unit: newIng.quantityUnit,
+                    ...ingredientData,
                     image: newIng.image || 'https://cdn-icons-png.flaticon.com/512/5029/5029236.png'
                 });
             }
@@ -242,8 +248,13 @@ export default function IngredientsCatalog() {
                                         <div>
                                             <p className="text-[10px] font-bold tracking-widest uppercase text-stone/40 mb-1">Costo Actual</p>
                                             <p className="text-2xl font-serif text-stone">
-                                                ${Number(ing.price).toFixed(2)} <span className="text-sm text-stone/40 italic">/ {ing.unit}</span>
+                                                €{Number(ing.price).toFixed(2)} <span className="text-sm text-stone/40 italic">/ {ing.unit}</span>
                                             </p>
+                                            {ing.purchase_price && (
+                                                <p className="text-[10px] text-stone/40">
+                                                    (Comp: €{ing.purchase_price} x {ing.purchase_quantity} {ing.purchase_unit})
+                                                </p>
+                                            )}
                                         </div>
                                         <button
                                             onClick={() => openEditModal(ing)}
@@ -346,15 +357,15 @@ export default function IngredientsCatalog() {
                                     <h4 className="font-serif font-bold italic text-terracotta mb-2">Cálculo de Costo Unitario</h4>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-[10px] font-bold tracking-widest uppercase text-stone/40 mb-2">Precio Total (€)</label>
+                                            <label className="block text-[10px] font-bold tracking-widest uppercase text-stone/40 mb-2">Precio Compra (€)</label>
                                             <input
                                                 type="number"
                                                 step="0.01"
                                                 required
                                                 className="w-full bg-white border border-stone/20 rounded-xl px-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif"
                                                 placeholder="0.00"
-                                                value={newIng.totalPrice}
-                                                onChange={e => setNewIng({ ...newIng, totalPrice: e.target.value })}
+                                                value={newIng.purchasePrice}
+                                                onChange={e => setNewIng({ ...newIng, purchasePrice: e.target.value })}
                                             />
                                         </div>
                                         <div className="flex gap-2">
@@ -366,31 +377,38 @@ export default function IngredientsCatalog() {
                                                     required
                                                     className="w-full bg-white border border-stone/20 rounded-xl px-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif"
                                                     placeholder="1"
-                                                    value={newIng.totalQuantity}
-                                                    onChange={e => setNewIng({ ...newIng, totalQuantity: e.target.value })}
+                                                    value={newIng.purchaseQuantity}
+                                                    onChange={e => setNewIng({ ...newIng, purchaseQuantity: e.target.value })}
                                                 />
                                             </div>
                                             <div className="w-20">
                                                 <label className="block text-[10px] font-bold tracking-widest uppercase text-stone/40 mb-2">Unidad</label>
                                                 <select
                                                     className="w-full bg-white border border-stone/20 rounded-xl px-2 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif text-sm"
-                                                    value={newIng.quantityUnit}
-                                                    onChange={e => setNewIng({ ...newIng, quantityUnit: e.target.value })}
+                                                    value={newIng.purchaseUnit}
+                                                    onChange={e => setNewIng({ ...newIng, purchaseUnit: e.target.value })}
                                                 >
-                                                    <option value="kg">kg</option>
-                                                    <option value="g">g</option>
-                                                    <option value="L">L</option>
-                                                    <option value="ml">ml</option>
-                                                    <option value="un">un</option>
+                                                    <optgroup label="Masa">
+                                                        {UNITS.MASS.map(u => <option key={u} value={u}>{u}</option>)}
+                                                    </optgroup>
+                                                    <optgroup label="Volumen">
+                                                        {UNITS.VOLUME.map(u => <option key={u} value={u}>{u}</option>)}
+                                                    </optgroup>
+                                                    <optgroup label="Unidad">
+                                                        {UNITS.COUNT.map(u => <option key={u} value={u}>{u}</option>)}
+                                                    </optgroup>
                                                 </select>
                                             </div>
                                         </div>
                                     </div>
-                                    {newIng.totalPrice && newIng.totalQuantity && (
+                                    {newIng.purchasePrice && newIng.purchaseQuantity && (
                                         <div className="flex justify-between items-center pt-2 border-t border-terracotta/10">
-                                            <span className="text-xs uppercase font-bold text-terracotta">Costo Calculado:</span>
+                                            <span className="text-xs uppercase font-bold text-terracotta">Costo Estandarizado:</span>
                                             <span className="font-serif font-black text-xl text-stone">
-                                                €{(parseFloat(newIng.totalPrice) / parseFloat(newIng.totalQuantity)).toFixed(2)} / {newIng.quantityUnit}
+                                                €{calculateStandardCost(parseFloat(newIng.purchasePrice), parseFloat(newIng.purchaseQuantity), newIng.purchaseUnit).toFixed(2)}
+                                                <span className="text-sm font-normal text-stone/50 ml-1">
+                                                    / {getUnitType(newIng.purchaseUnit) === 'volume' ? 'L' : getUnitType(newIng.purchaseUnit) === 'count' ? 'un' : 'kg'}
+                                                </span>
                                             </span>
                                         </div>
                                     )}

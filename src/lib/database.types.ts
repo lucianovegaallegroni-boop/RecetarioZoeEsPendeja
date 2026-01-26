@@ -18,6 +18,9 @@ export type Database = {
                     last_updated: string | null
                     name: string
                     price: number
+                    purchase_price: number | null
+                    purchase_quantity: number | null
+                    purchase_unit: string | null
                     trend: string | null
                     unit: string
                     vendor: string
@@ -30,6 +33,9 @@ export type Database = {
                     last_updated?: string | null
                     name: string
                     price: number
+                    purchase_price?: number | null
+                    purchase_quantity?: number | null
+                    purchase_unit?: string | null
                     trend?: string | null
                     unit: string
                     vendor: string
@@ -42,6 +48,9 @@ export type Database = {
                     last_updated?: string | null
                     name?: string
                     price?: number
+                    purchase_price?: number | null
+                    purchase_quantity?: number | null
+                    purchase_unit?: string | null
                     trend?: string | null
                     unit?: string
                     vendor?: string

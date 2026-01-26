@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getRecipeById, type RecipeWithDetails } from './lib/api';
+import { getRecipeById, updateRecipe, type RecipeWithDetails } from './lib/api';
+import { convertValue } from './lib/conversions';
+import RecipeModal from './components/RecipeModal';
 
 export default function RecipeDetail() {
     const navigate = useNavigate();
     const { id } = useParams();
     const [recipe, setRecipe] = useState<RecipeWithDetails | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -23,6 +26,37 @@ export default function RecipeDetail() {
             console.error('Error fetching recipe:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleUpdateRecipe = async (data: {
+        name: string;
+        description: string;
+        image: string;
+        ingredients: { ingredientId: string; quantity: string; unit: string }[];
+        steps: string[];
+    }) => {
+        if (!recipe) return;
+
+        try {
+            const recipeData = {
+                name: data.name,
+                description: data.description,
+                image: data.image,
+            };
+
+            const recipeIngredients = data.ingredients.map(ing => ({
+                ingredient_id: ing.ingredientId,
+                quantity: parseFloat(ing.quantity),
+                unit: ing.unit
+            }));
+
+            await updateRecipe(recipe.id, recipeData, recipeIngredients, data.steps);
+            await fetchRecipe(recipe.id);
+            alert('¡Receta actualizada con éxito!');
+        } catch (error) {
+            console.error('Error updating recipe:', error);
+            alert('Hubo un error al actualizar la receta. Por favor intenta de nuevo.');
         }
     };
 
@@ -49,8 +83,12 @@ export default function RecipeDetail() {
     }
 
     // Calculate economics
+    // Calculate economics
     const totalCost = recipe.recipe_ingredients.reduce((sum, item) => {
-        return sum + (item.quantity * item.ingredients.price);
+        // We need to convert the quantity used in recipe (item.unit) 
+        // to the unit used for pricing (item.ingredients.unit)
+        const qtyInPriceUnit = convertValue(item.quantity, item.unit, item.ingredients.unit);
+        return sum + (qtyInPriceUnit * item.ingredients.price);
     }, 0);
 
     const costPerServing = totalCost / 12; // Assuming 12 servings default for now, can be dynamic later or field added
@@ -70,6 +108,13 @@ export default function RecipeDetail() {
                     <Link to="/materiaprima" className="hover:text-terracotta transition-colors">Materia Prima</Link>
                 </nav>
                 <div className="flex items-center gap-6">
+                    <button
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-stone/10 text-stone rounded-full hover:bg-stone/20 transition-all text-sm font-semibold tracking-wide"
+                    >
+                        <span className="material-symbols-outlined text-lg">edit</span>
+                        EDITAR
+                    </button>
                     <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2.5 bg-terracotta text-white rounded-full hover:bg-terracotta/90 transition-all shadow-lg shadow-terracotta/20 text-sm font-semibold tracking-wide">
                         <span className="material-symbols-outlined text-lg">print</span>
                         IMPRIMIR
@@ -159,10 +204,10 @@ export default function RecipeDetail() {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="text-left text-xs uppercase tracking-[0.2em] text-stone/40 border-b border-terracotta/10">
-                                            <th className="pb-4 font-bold">Ingrediente Noble</th>
-                                            <th className="pb-4 font-bold">Cantidad</th>
-                                            <th className="pb-4 font-bold text-right">Costo Unitario</th>
-                                            <th className="pb-4 font-bold text-right">Total</th>
+                                            <th className="pb-4 font-bold w-1/2 md:w-auto">Ingrediente Noble</th>
+                                            <th className="pb-4 font-bold w-1/4 md:w-auto">Cantidad</th>
+                                            <th className="pb-4 font-bold text-right hidden md:table-cell">Costo Unitario</th>
+                                            <th className="pb-4 font-bold text-right hidden md:table-cell">Total</th>
                                         </tr>
                                     </thead>
                                     <tbody className="font-sans text-stone divide-y divide-terracotta/5">
@@ -170,20 +215,24 @@ export default function RecipeDetail() {
                                             <tr key={item.id} className="group hover:bg-cream/50 transition-colors">
                                                 <td className="py-6 flex items-center gap-4">
                                                     <span className="material-symbols-outlined text-terracotta/40">grain</span>
-                                                    <span className="font-medium text-lg">{item.ingredients.name}</span>
+                                                    <span className="font-medium text-lg text-stone">{item.ingredients.name}</span>
                                                 </td>
                                                 <td className="py-6 italic text-stone/60">{item.quantity} {item.unit}</td>
-                                                <td className="py-6 text-right text-stone/60">€{item.ingredients.price.toFixed(2)}</td>
-                                                <td className="py-6 text-right font-serif font-bold text-lg">
-                                                    €{(item.quantity * item.ingredients.price).toFixed(2)}
+                                                <td className="py-6 text-right text-stone/60 hidden md:table-cell">€{item.ingredients.price.toFixed(2)}</td>
+                                                <td className="py-6 text-right font-serif font-bold text-lg hidden md:table-cell">
+                                                    €{(convertValue(item.quantity, item.unit, item.ingredients.unit) * item.ingredients.price).toFixed(2)}
                                                 </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <td className="pt-8 text-right font-sans text-xs uppercase tracking-[0.3em] font-bold text-stone/40" colSpan={3}>Total Materia Prima</td>
-                                            <td className="pt-8 text-right font-serif text-3xl font-black text-terracotta">€{totalCost.toFixed(2)}</td>
+                                            <td className="pt-8 text-right font-sans text-xs uppercase tracking-[0.3em] font-bold text-stone/40 hidden md:table-cell" colSpan={3}>Total Materia Prima</td>
+                                            <td className="pt-8 text-right font-serif text-3xl font-black text-terracotta hidden md:table-cell">€{totalCost.toFixed(2)}</td>
+
+                                            {/* Mobile Total */}
+                                            <td className="pt-8 text-right font-sans text-xs uppercase tracking-[0.3em] font-bold text-stone/40 md:hidden pb-2" colSpan={2}>Total</td>
+                                            <td className="pt-8 text-right font-serif text-3xl font-black text-terracotta md:hidden pb-2" colSpan={2}>€{totalCost.toFixed(2)}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -242,6 +291,13 @@ export default function RecipeDetail() {
                     </div>
                 </div>
             </footer>
+            {/* Edit Modal */}
+            <RecipeModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={handleUpdateRecipe}
+                initialData={recipe}
+            />
         </div>
     )
 }
