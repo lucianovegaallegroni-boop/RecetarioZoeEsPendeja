@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getIngredients } from './lib/api';
-import type { Ingredient } from './lib/database.types';
+import { getIngredients, createRecipe, getRecipes } from './lib/api';
+import type { Ingredient, Recipe } from './lib/database.types';
 
 const UNIT_OPTIONS = ['kg', 'g', 'L', 'ml', 'un'];
 
@@ -14,27 +14,35 @@ interface RecipeIngredient {
 export default function HomePage() {
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [availableIngredients, setAvailableIngredients] = useState<Ingredient[]>([]);
     const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
 
-    // Recipe form state
-    const [recipeName, setRecipeName] = useState('');
-    const [recipeDescription, setRecipeDescription] = useState('');
-    const [selectedIngredients, setSelectedIngredients] = useState<RecipeIngredient[]>([]);
-    const [steps, setSteps] = useState<string[]>([]);
-    const [newStep, setNewStep] = useState('');
-    const [newIngredient, setNewIngredient] = useState<RecipeIngredient>({
-        ingredientId: '',
-        quantity: '',
-        unit: 'kg'
-    });
+    // Fetch recipes state
+    const [itemsPerPage] = useState(5);
+    const [currentPage, setCurrentPage] = useState(1);
 
-    // Fetch ingredients when modal opens
+    // Pagination for recipes
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const paginatedRecipes = recipes.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(recipes.length / itemsPerPage);
+
+    // Initial fetch
     useEffect(() => {
-        if (isModalOpen && availableIngredients.length === 0) {
-            fetchIngredients();
+        fetchRecipes();
+        fetchIngredients();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const fetchRecipes = async () => {
+        try {
+            const data = await getRecipes();
+            setRecipes(data);
+        } catch (err) {
+            console.error('Error fetching recipes:', err);
         }
-    }, [isModalOpen]);
+    };
 
     const fetchIngredients = async () => {
         try {
@@ -48,6 +56,7 @@ export default function HomePage() {
         }
     };
 
+    // Helper functions re-added since they were seemingly removed in previous chunk replacement
     const handleAddIngredient = () => {
         if (newIngredient.ingredientId && newIngredient.quantity) {
             setSelectedIngredients([...selectedIngredients, { ...newIngredient }]);
@@ -96,21 +105,58 @@ export default function HomePage() {
         setEditingStepValue('');
     };
 
-    const handleSaveRecipe = () => {
-        // Here you would save the recipe
-        console.log({
-            name: recipeName,
-            description: recipeDescription,
-            ingredients: selectedIngredients,
-            steps
-        });
-        closeModal();
+    // Recipe form state
+    const [recipeName, setRecipeName] = useState('');
+    const [recipeDescription, setRecipeDescription] = useState('');
+    const [recipeImage, setRecipeImage] = useState('');
+    const [selectedIngredients, setSelectedIngredients] = useState<RecipeIngredient[]>([]);
+    const [steps, setSteps] = useState<string[]>([]);
+    const [newStep, setNewStep] = useState('');
+    const [newIngredient, setNewIngredient] = useState<RecipeIngredient>({
+        ingredientId: '',
+        quantity: '',
+        unit: 'kg'
+    });
+
+
+
+
+
+    const handleSaveRecipe = async () => {
+        try {
+            if (!recipeName) return;
+
+            const recipeData = {
+                name: recipeName,
+                description: recipeDescription,
+                image: recipeImage,
+            };
+
+            const recipeIngredients = selectedIngredients.map(ing => ({
+                ingredient_id: ing.ingredientId,
+                quantity: parseFloat(ing.quantity), // Convert string to number
+                unit: ing.unit
+            }));
+
+            await createRecipe(recipeData, recipeIngredients, steps);
+
+            // Close modal and reset form
+            closeModal();
+
+            // Optionally refresh the recipes list if we display them
+            await fetchRecipes();
+            alert('¡Receta guardada con éxito!');
+        } catch (error) {
+            console.error('Error saving recipe:', error);
+            alert('Hubo un error al guardar la receta. Por favor intenta de nuevo.');
+        }
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
         setRecipeName('');
         setRecipeDescription('');
+        setRecipeImage('');
         setSelectedIngredients([]);
         setSteps([]);
         setNewStep('');
@@ -187,191 +233,67 @@ export default function HomePage() {
                                 <thead>
                                     <tr className="text-left">
                                         <th className="px-6 py-8 border-b-2 border-stone/10 bg-cream/30">
-                                            <span className="text-xs uppercase tracking-[0.3em] font-bold text-stone/40">Ingrediente Noble</span>
+                                            <span className="text-xs uppercase tracking-[0.3em] font-bold text-stone/40">Receta</span>
                                         </th>
                                         <th className="px-6 py-8 border-b-2 border-stone/10 bg-cream/30">
-                                            <span className="text-xs uppercase tracking-[0.3em] font-bold text-stone/40">Categoría</span>
-                                        </th>
-                                        <th className="px-6 py-8 border-b-2 border-stone/10 bg-cream/30 text-center">
-                                            <span className="text-xs uppercase tracking-[0.3em] font-bold text-stone/40">Stock Actual</span>
+                                            <span className="text-xs uppercase tracking-[0.3em] font-bold text-stone/40">Descripción</span>
                                         </th>
                                         <th className="px-6 py-8 border-b-2 border-stone/10 bg-cream/30">
-                                            <span className="text-xs uppercase tracking-[0.3em] font-bold text-stone/40">Unidad</span>
-                                        </th>
-                                        <th className="px-6 py-8 border-b-2 border-stone/10 bg-cream/30 text-right">
-                                            <span className="text-xs uppercase tracking-[0.3em] font-bold text-stone/40">Último Precio</span>
-                                        </th>
-                                        <th className="px-6 py-8 border-b-2 border-stone/10 bg-cream/30">
-                                            <span className="text-xs uppercase tracking-[0.3em] font-bold text-stone/40">Proveedor</span>
+                                            <span className="text-xs uppercase tracking-[0.3em] font-bold text-stone/40">Fecha de Creación</span>
                                         </th>
                                         <th className="px-6 py-8 border-b-2 border-stone/10 bg-cream/30"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="font-sans text-stone">
-                                    {/* Row 1 */}
-                                    <tr
-                                        className="ledger-row group cursor-pointer hover:bg-cream/50 transition-colors"
-                                        onClick={() => navigate('/receta/1')}
-                                    >
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="size-12 bg-blush rounded-xl flex items-center justify-center text-terracotta group-hover:scale-110 transition-transform">
-                                                    <span className="material-symbols-outlined text-2xl">science</span>
+                                    {paginatedRecipes.map((recipe) => (
+                                        <tr
+                                            key={recipe.id}
+                                            className="ledger-row group cursor-pointer hover:bg-cream/50 transition-colors"
+                                            onClick={() => navigate(`/receta/${recipe.id}`)}
+                                        >
+                                            <td className="px-6 py-8 border-b border-stone/5">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="size-16 bg-blush rounded-xl flex items-center justify-center text-terracotta group-hover:scale-110 transition-transform overflow-hidden shadow-sm">
+                                                        {recipe.image ? (
+                                                            <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="material-symbols-outlined text-3xl">restaurant_menu</span>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-serif font-bold text-xl italic leading-none mb-1">{recipe.name}</p>
+                                                        <p className="text-[10px] text-stone/40 uppercase tracking-widest font-bold">Ref: {recipe.id.slice(0, 8)}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="font-serif font-bold text-xl italic leading-none mb-1">Esencia de Vainilla Bourbon</p>
-                                                    <p className="text-[10px] text-stone/40 uppercase tracking-widest font-bold">Madagascar High Grade</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-sage/10 text-sage text-xs font-bold tracking-wider uppercase border border-sage/20">
-                                                <span className="material-symbols-outlined text-sm mr-1">eco</span> Esencias
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-center">
-                                            <p className="text-2xl font-serif text-stone">2.5</p>
-                                            <div className="w-16 h-1.5 bg-stone/10 rounded-full mx-auto mt-2 overflow-hidden">
-                                                <div className="w-[70%] h-full bg-sage"></div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 font-serif italic text-stone/60">Litros</td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-right">
-                                            <p className="text-xl font-serif font-bold">€124.00</p>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <p className="text-sm italic font-medium">Les Vergers du Monde</p>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-right">
-                                            <button className="text-stone/20 hover:text-terracotta transition-colors">
-                                                <span className="material-symbols-outlined">edit_square</span>
-                                            </button>
-                                        </td>
-                                    </tr>
-
-                                    {/* Row 2 */}
-                                    <tr
-                                        className="ledger-row group cursor-pointer hover:bg-cream/50 transition-colors"
-                                        onClick={() => navigate('/receta/2')}
-                                    >
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="size-12 bg-blush rounded-xl flex items-center justify-center text-terracotta group-hover:scale-110 transition-transform">
-                                                    <span className="material-symbols-outlined text-2xl">cookie</span>
-                                                </div>
-                                                <div>
-                                                    <p className="font-serif font-bold text-xl italic leading-none mb-1">Mantequilla Charentes-Poitou</p>
-                                                    <p className="text-[10px] text-stone/40 uppercase tracking-widest font-bold">AOP Artisanal</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-terracotta/10 text-terracotta text-xs font-bold tracking-wider uppercase border border-terracotta/20">
-                                                <span className="material-symbols-outlined text-sm mr-1">opacity</span> Lácteos
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-center">
-                                            <p className="text-2xl font-serif text-terracotta">12</p>
-                                            <div className="w-16 h-1.5 bg-stone/10 rounded-full mx-auto mt-2 overflow-hidden">
-                                                <div className="w-[20%] h-full bg-terracotta"></div>
-                                            </div>
-                                            <span className="text-[9px] uppercase font-black text-terracotta tracking-tighter">Bajo Stock</span>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 font-serif italic text-stone/60">Kilogramos</td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-right">
-                                            <p className="text-xl font-serif font-bold">€18.50</p>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <p className="text-sm italic font-medium">Distribución Selecta SL</p>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-right">
-                                            <button className="text-stone/20 hover:text-terracotta transition-colors">
-                                                <span className="material-symbols-outlined">edit_square</span>
-                                            </button>
-                                        </td>
-                                    </tr>
-
-                                    {/* Row 3 */}
-                                    <tr
-                                        className="ledger-row group cursor-pointer hover:bg-cream/50 transition-colors"
-                                        onClick={() => navigate('/receta/3')}
-                                    >
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="size-12 bg-blush rounded-xl flex items-center justify-center text-terracotta group-hover:scale-110 transition-transform">
-                                                    <span className="material-symbols-outlined text-2xl">grain</span>
-                                                </div>
-                                                <div>
-                                                    <p className="font-serif font-bold text-xl italic leading-none mb-1">Harina T45 de Fuerza</p>
-                                                    <p className="text-[10px] text-stone/40 uppercase tracking-widest font-bold">Molino de Viento Orgánico</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-stone/10 text-stone/60 text-xs font-bold tracking-wider uppercase border border-stone/20">
-                                                <span className="material-symbols-outlined text-sm mr-1">bakery_dining</span> Secos
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-center">
-                                            <p className="text-2xl font-serif text-stone">150</p>
-                                            <div className="w-16 h-1.5 bg-stone/10 rounded-full mx-auto mt-2 overflow-hidden">
-                                                <div className="w-[90%] h-full bg-sage"></div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 font-serif italic text-stone/60">Kilogramos</td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-right">
-                                            <p className="text-xl font-serif font-bold">€1.45</p>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <p className="text-sm italic font-medium">Harinas Tradición</p>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-right">
-                                            <button className="text-stone/20 hover:text-terracotta transition-colors">
-                                                <span className="material-symbols-outlined">edit_square</span>
-                                            </button>
-                                        </td>
-                                    </tr>
-
-                                    {/* Row 4 */}
-                                    <tr
-                                        className="ledger-row group cursor-pointer hover:bg-cream/50 transition-colors"
-                                        onClick={() => navigate('/receta/4')}
-                                    >
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="size-12 bg-blush rounded-xl flex items-center justify-center text-terracotta group-hover:scale-110 transition-transform">
-                                                    <span className="material-symbols-outlined text-2xl">egg</span>
-                                                </div>
-                                                <div>
-                                                    <p className="font-serif font-bold text-xl italic leading-none mb-1">Huevos de Granja Orgánicos</p>
-                                                    <p className="text-[10px] text-stone/40 uppercase tracking-widest font-bold">Clase A, Talla L</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-terracotta/10 text-terracotta text-xs font-bold tracking-wider uppercase border border-terracotta/20">
-                                                <span className="material-symbols-outlined text-sm mr-1">nest_eco</span> Frescos
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-center">
-                                            <p className="text-2xl font-serif text-stone">240</p>
-                                            <div className="w-16 h-1.5 bg-stone/10 rounded-full mx-auto mt-2 overflow-hidden">
-                                                <div className="w-[45%] h-full bg-terracotta"></div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 font-serif italic text-stone/60">Unidades</td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-right">
-                                            <p className="text-xl font-serif font-bold">€0.32</p>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5">
-                                            <p className="text-sm italic font-medium">Granja Valle Azul</p>
-                                        </td>
-                                        <td className="px-6 py-8 border-b border-stone/5 text-right">
-                                            <button className="text-stone/20 hover:text-terracotta transition-colors">
-                                                <span className="material-symbols-outlined">edit_square</span>
-                                            </button>
-                                        </td>
-                                    </tr>
+                                            </td>
+                                            <td className="px-6 py-8 border-b border-stone/5">
+                                                <p className="font-serif italic text-stone/70 text-sm line-clamp-2 max-w-xs">
+                                                    {recipe.description || 'Sin descripción'}
+                                                </p>
+                                            </td>
+                                            <td className="px-6 py-8 border-b border-stone/5">
+                                                <p className="text-sm font-medium text-stone/60">
+                                                    {new Date(recipe.created_at || Date.now()).toLocaleDateString('es-ES', {
+                                                        year: 'numeric',
+                                                        month: 'long',
+                                                        day: 'numeric'
+                                                    })}
+                                                </p>
+                                            </td>
+                                            <td className="px-6 py-8 border-b border-stone/5 text-right">
+                                                <button className="text-stone/20 hover:text-terracotta transition-colors p-2">
+                                                    <span className="material-symbols-outlined">edit_square</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {paginatedRecipes.length === 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-12 text-center text-stone/40 italic">
+                                                No hay recetas disponibles. ¡Crea la primera!
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -379,20 +301,37 @@ export default function HomePage() {
                         {/* Pagination */}
                         <div className="p-8 border-t border-blush bg-cream/20 flex flex-col md:flex-row justify-between items-center gap-4">
                             <div className="flex gap-4">
-                                <button className="px-4 py-2 text-xs uppercase tracking-widest font-bold text-stone/50 hover:text-stone transition-colors flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-4 py-2 text-xs uppercase tracking-widest font-bold text-stone/50 hover:text-stone transition-colors flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
                                     <span className="material-symbols-outlined text-sm">arrow_back</span> Anterior
                                 </button>
                                 <div className="flex items-center gap-2">
-                                    <span className="size-8 flex items-center justify-center rounded-full bg-stone text-white font-serif italic text-sm">1</span>
-                                    <span className="size-8 flex items-center justify-center rounded-full hover:bg-blush transition-colors font-serif italic text-sm cursor-pointer">2</span>
-                                    <span className="size-8 flex items-center justify-center rounded-full hover:bg-blush transition-colors font-serif italic text-sm cursor-pointer">3</span>
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                        <button
+                                            key={page}
+                                            onClick={() => setCurrentPage(page)}
+                                            className={`size-8 flex items-center justify-center rounded-full transition-colors font-serif italic text-sm cursor-pointer ${currentPage === page ? 'bg-stone text-white' : 'hover:bg-blush'
+                                                }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    ))}
                                 </div>
-                                <button className="px-4 py-2 text-xs uppercase tracking-widest font-bold text-stone hover:text-terracotta transition-colors flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-4 py-2 text-xs uppercase tracking-widest font-bold text-stone hover:text-terracotta transition-colors flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
                                     Siguiente <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                 </button>
                             </div>
                             <div className="text-right">
-                                <p className="text-[10px] uppercase tracking-widest font-bold text-stone/40">Mostrando 4 de 84 esencias nobles registradas</p>
+                                <p className="text-[10px] uppercase tracking-widest font-bold text-stone/40">
+                                    Mostrando {recipes.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, recipes.length)} de {recipes.length} recetas
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -508,6 +447,18 @@ export default function HomePage() {
                                     placeholder="Una breve descripción de la receta..."
                                     value={recipeDescription}
                                     onChange={(e) => setRecipeDescription(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Image URL */}
+                            <div>
+                                <label className="block text-xs font-bold tracking-widest uppercase text-stone/40 mb-2">URL de la Imagen (Opcional)</label>
+                                <input
+                                    type="url"
+                                    className="w-full bg-white border border-stone/20 rounded-xl px-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif"
+                                    placeholder="https://ejemplo.com/foto.jpg"
+                                    value={recipeImage}
+                                    onChange={(e) => setRecipeImage(e.target.value)}
                                 />
                             </div>
 
