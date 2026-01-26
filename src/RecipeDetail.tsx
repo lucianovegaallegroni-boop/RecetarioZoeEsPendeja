@@ -199,7 +199,7 @@ export default function RecipeDetail() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                         {recipe.recipe_steps.length > 0 ? (
-                            recipe.recipe_steps.map((step, index) => (
+                            recipe.recipe_steps.map((step) => (
                                 <div key={step.id} className="flex flex-col gap-6 relative p-8 bg-white rounded-3xl border border-blush shadow-sm hover:shadow-xl transition-all group">
                                     <span className="absolute -top-4 -left-4 size-12 bg-terracotta text-white rounded-full flex items-center justify-center font-serif text-2xl italic group-hover:scale-110 transition-transform">
                                         {step.step_number}
