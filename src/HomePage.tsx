@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { createRecipe, getRecipes } from './lib/api';
 import type { Recipe } from './lib/database.types';
 import RecipeModal from './components/RecipeModal';
+import Header from './components/Header';
 
 export default function HomePage() {
     const navigate = useNavigate();
@@ -60,32 +61,26 @@ export default function HomePage() {
     return (
         <div className="min-h-screen">
             {/* Header */}
-            <header className="w-full px-8 py-6 flex justify-between items-center border-b border-terracotta/10 bg-cream/80 backdrop-blur-md sticky top-0 z-50">
-                <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-terracotta text-3xl">menu_book</span>
-                    <h1 className="text-2xl font-black tracking-tight text-stone">Zoe es <span className="text-terracotta italic">Pendeja</span></h1>
-                </div>
-                <nav className="hidden md:flex items-center gap-12 font-sans text-sm uppercase tracking-[0.2em] font-medium text-stone/70">
-                    <Link to="/" className="text-terracotta border-b border-terracotta">Recetas</Link>
-                    <a className="hover:text-terracotta transition-colors" href="#">Precios</a>
-                    <Link to="/materiaprima" className="hover:text-terracotta transition-colors">Materia Prima</Link>
-                </nav>
-                <div className="flex items-center gap-6">
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-stone text-cream rounded-full hover:bg-stone/90 transition-all text-sm font-semibold tracking-wide"
-                    >
-                        <span className="material-symbols-outlined text-lg">add_circle</span>
-                        NUEVA RECETA
-                    </button>
-                    <div className="size-10 rounded-full border-2 border-terracotta/20 p-0.5">
-                        <div
-                            className="w-full h-full rounded-full bg-cover bg-center"
-                            style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQLsz3M05NHMurGr2XdE5ytIyWJTGQb0UCDYt6ZrH8hjHTs_auB2Z1UXcs1XM4gCbP321jGNN2he-o-Bj3POhpp-57tS1HrIJTmZZLE17eYVInXDVexgBt_FgXpw1G0SBWimYaLpCO_5c5AyFe5ktWdhV6WkmlA98eybJHGLz_UzzyBaNcnXIb-g9SyGjmroPg3MwrilIAIhuuzbtpnzy-5rnULhDI3XP50L8gtW-JjRLQTqDjrGZXEBL_cqmA1bvhsj5SMAGOMME")' }}
-                        ></div>
-                    </div>
-                </div>
-            </header>
+            <Header
+                actions={
+                    <>
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 bg-stone text-cream rounded-full hover:bg-stone/90 transition-all text-xs md:text-sm font-semibold tracking-wide"
+                        >
+                            <span className="material-symbols-outlined text-base md:text-lg">add_circle</span>
+                            <span className="hidden md:inline">NUEVA RECETA</span>
+                            <span className="md:hidden">NUEVA</span>
+                        </button>
+                        <div className="size-8 md:size-10 rounded-full border-2 border-terracotta/20 p-0.5">
+                            <div
+                                className="w-full h-full rounded-full bg-cover bg-center"
+                                style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQLsz3M05NHMurGr2XdE5ytIyWJTGQb0UCDYt6ZrH8hjHTs_auB2Z1UXcs1XM4gCbP321jGNN2he-o-Bj3POhpp-57tS1HrIJTmZZLE17eYVInXDVexgBt_FgXpw1G0SBWimYaLpCO_5c5AyFe5ktWdhV6WkmlA98eybJHGLz_UzzyBaNcnXIb-g9SyGjmroPg3MwrilIAIhuuzbtpnzy-5rnULhDI3XP50L8gtW-JjRLQTqDjrGZXEBL_cqmA1bvhsj5SMAGOMME")' }}
+                            ></div>
+                        </div>
+                    </>
+                }
+            />
 
             {/* Main Content */}
             <main className="max-w-[1400px] mx-auto px-4 md:px-12 py-12">
@@ -273,7 +268,7 @@ export default function HomePage() {
                 <div className="max-w-[1400px] mx-auto px-12">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-16 items-start">
                         <div>
-                            <h2 className="text-3xl font-serif italic mb-6">La Boutique <span className="text-terracotta">Sucrée</span></h2>
+                            <h2 className="text-3xl font-serif italic mb-6">Zoe es <span className="text-terracotta">pendeja</span></h2>
                             <p className="text-white/50 text-sm leading-relaxed max-w-xs italic">La gestión del gusto a través de la precisión. Cada gramo cuenta una historia, cada céntimo construye un sueño.</p>
                         </div>
                         <div className="flex flex-col gap-4">
@@ -290,7 +285,7 @@ export default function HomePage() {
                         </div>
                     </div>
                     <div className="mt-20 pt-10 border-t border-white/10 flex flex-col md:flex-row justify-between gap-6 items-center">
-                        <span className="text-white/30 text-xs tracking-widest uppercase">© 2024 La Boutique Sucrée — Sistema de Gestión Artisanal</span>
+                        <span className="text-white/30 text-xs tracking-widest uppercase">© 2026 Zoe es pendeja — Sistema de Gestión Artisanal</span>
                         <div className="flex gap-8 text-white/30 text-xs tracking-widest uppercase">
                             <a className="hover:text-terracotta" href="#">Confidencialidad</a>
                             <a className="hover:text-terracotta" href="#">Conserjería</a>

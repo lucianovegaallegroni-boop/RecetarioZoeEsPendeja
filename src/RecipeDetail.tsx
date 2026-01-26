@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getRecipeById, updateRecipe, type RecipeWithDetails } from './lib/api';
 import { convertValue } from './lib/conversions';
 import RecipeModal from './components/RecipeModal';
+import Header from './components/Header';
 
 export default function RecipeDetail() {
     const navigate = useNavigate();
@@ -10,6 +11,8 @@ export default function RecipeDetail() {
     const [recipe, setRecipe] = useState<RecipeWithDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [servings, setServings] = useState(12);
+    const [marginMultiplier, setMarginMultiplier] = useState(3.5);
 
     useEffect(() => {
         if (id) {
@@ -83,7 +86,6 @@ export default function RecipeDetail() {
     }
 
     // Calculate economics
-    // Calculate economics
     const totalCost = recipe.recipe_ingredients.reduce((sum, item) => {
         // We need to convert the quantity used in recipe (item.unit) 
         // to the unit used for pricing (item.ingredients.unit)
@@ -91,39 +93,28 @@ export default function RecipeDetail() {
         return sum + (qtyInPriceUnit * item.ingredients.price);
     }, 0);
 
-    const costPerServing = totalCost / 12; // Assuming 12 servings default for now, can be dynamic later or field added
-    const recommendedPrice = costPerServing * 3.5; // 3.5x markup logic (approx 71% margin) or just * 3
+    const costPerServing = servings > 0 ? totalCost / servings : 0;
+    const recommendedPrice = costPerServing * marginMultiplier;
     const margin = recommendedPrice > 0 ? ((recommendedPrice - costPerServing) / recommendedPrice) * 100 : 0;
 
     return (
         <div className="min-h-screen selection:bg-terracotta/20">
-            <header className="w-full px-8 py-6 flex justify-between items-center border-b border-terracotta/10 bg-cream/80 backdrop-blur-md sticky top-0 z-50">
-                <Link to="/" className="flex items-center gap-2 cursor-pointer">
-                    <span className="material-symbols-outlined text-terracotta text-3xl">restaurant_menu</span>
-                    <h1 className="text-2xl font-black tracking-tight text-stone">Zoe es <span className="text-terracotta italic">Pendeja</span></h1>
-                </Link>
-                <nav className="hidden md:flex items-center gap-12 font-sans text-sm uppercase tracking-[0.2em] font-medium text-stone/70">
-                    <Link to="/" className="text-terracotta border-b border-terracotta">Recetas</Link>
-                    <a className="hover:text-terracotta transition-colors" href="#">Precios</a>
-                    <Link to="/materiaprima" className="hover:text-terracotta transition-colors">Materia Prima</Link>
-                </nav>
-                <div className="flex items-center gap-6">
-                    <button
-                        onClick={() => setIsEditModalOpen(true)}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-stone/10 text-stone rounded-full hover:bg-stone/20 transition-all text-sm font-semibold tracking-wide"
-                    >
-                        <span className="material-symbols-outlined text-lg">edit</span>
-                        EDITAR
-                    </button>
-                    <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2.5 bg-terracotta text-white rounded-full hover:bg-terracotta/90 transition-all shadow-lg shadow-terracotta/20 text-sm font-semibold tracking-wide">
-                        <span className="material-symbols-outlined text-lg">print</span>
-                        IMPRIMIR
-                    </button>
-                    <div className="size-10 rounded-full border-2 border-terracotta/20 p-0.5">
-                        <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQLsz3M05NHMurGr2XdE5ytIyWJTGQb0UCDYt6ZrH8hjHTs_auB2Z1UXcs1XM4gCbP321jGNN2he-o-Bj3POhpp-57tS1HrIJTmZZLE17eYVInXDVexgBt_FgXpw1G0SBWimYaLpCO_5c5AyFe5ktWdhV6WkmlA98eybJHGLz_UzzyBaNcnXIb-g9SyGjmroPg3MwrilIAIhuuzbtpnzy-5rnULhDI3XP50L8gtW-JjRLQTqDjrGZXEBL_cqmA1bvhsj5SMAGOMME")' }}></div>
-                    </div>
-                </div>
-            </header>
+            <Header
+                actions={
+                    <>
+                        <button
+                            onClick={() => setIsEditModalOpen(true)}
+                            className="flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 bg-stone/10 text-stone rounded-full hover:bg-stone/20 transition-all text-xs md:text-sm font-semibold tracking-wide"
+                        >
+                            <span className="material-symbols-outlined text-base md:text-lg">edit</span>
+                            <span className="hidden md:inline">EDITAR</span>
+                        </button>
+                        <div className="size-8 md:size-10 rounded-full border-2 border-terracotta/20 p-0.5 hidden md:block">
+                            <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQLsz3M05NHMurGr2XdE5ytIyWJTGQb0UCDYt6ZrH8hjHTs_auB2Z1UXcs1XM4gCbP321jGNN2he-o-Bj3POhpp-57tS1HrIJTmZZLE17eYVInXDVexgBt_FgXpw1G0SBWimYaLpCO_5c5AyFe5ktWdhV6WkmlA98eybJHGLz_UzzyBaNcnXIb-g9SyGjmroPg3MwrilIAIhuuzbtpnzy-5rnULhDI3XP50L8gtW-JjRLQTqDjrGZXEBL_cqmA1bvhsj5SMAGOMME")' }}></div>
+                        </div>
+                    </>
+                }
+            />
 
             <main className="max-w-[1400px] mx-auto px-4 md:px-12 py-12">
                 <section className="relative w-full mb-20">
@@ -161,7 +152,42 @@ export default function RecipeDetail() {
                     <div className="lg:col-span-4 space-y-12">
                         <div>
                             <h3 className="text-3xl font-bold mb-6 italic border-b border-terracotta/20 pb-4">Economía del Sabor</h3>
-                            <div className="space-y-8">
+                            <div className="space-y-6">
+                                {/* Editable Servings */}
+                                <div className="bg-cream/50 p-4 rounded-2xl border border-terracotta/10">
+                                    <label className="text-xs uppercase tracking-widest text-stone/50 font-bold block mb-2">
+                                        Número de Porciones
+                                    </label>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={servings}
+                                            onChange={(e) => setServings(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-24 px-3 py-2 text-2xl font-serif text-stone bg-white border border-terracotta/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-terracotta/30 transition-all"
+                                        />
+                                        <span className="material-symbols-outlined text-2xl text-terracotta/40">restaurant</span>
+                                    </div>
+                                </div>
+
+                                {/* Editable Margin Multiplier */}
+                                <div className="bg-cream/50 p-4 rounded-2xl border border-terracotta/10">
+                                    <label className="text-xs uppercase tracking-widest text-stone/50 font-bold block mb-2">
+                                        Multiplicador de Margen
+                                    </label>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            step="0.1"
+                                            value={marginMultiplier}
+                                            onChange={(e) => setMarginMultiplier(Math.max(1, parseFloat(e.target.value) || 1))}
+                                            className="w-24 px-3 py-2 text-2xl font-serif text-stone bg-white border border-terracotta/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-terracotta/30 transition-all"
+                                        />
+                                        <span className="text-stone/50 text-sm">x costo</span>
+                                    </div>
+                                </div>
+
                                 <div className="flex items-center justify-between group">
                                     <div>
                                         <p className="text-xs uppercase tracking-widest text-stone/50 font-bold">Costo del Atelier</p>
@@ -171,17 +197,17 @@ export default function RecipeDetail() {
                                 </div>
                                 <div className="flex items-center justify-between group">
                                     <div>
-                                        <p className="text-xs uppercase tracking-widest text-stone/50 font-bold">Costo por Porción (WebApp)</p>
+                                        <p className="text-xs uppercase tracking-widest text-stone/50 font-bold">Costo por Porción</p>
                                         <p className="text-4xl font-serif text-stone group-hover:text-terracotta transition-colors">€{costPerServing.toFixed(2)}</p>
                                     </div>
                                     <span className="material-symbols-outlined text-4xl text-terracotta/20">bakery_dining</span>
                                 </div>
-                                <div className="flex items-center justify-between group">
+                                <div className="flex items-center justify-between group bg-terracotta/5 p-4 rounded-2xl border border-terracotta/20">
                                     <div>
                                         <p className="text-xs uppercase tracking-widest text-stone/50 font-bold">Venta Sugerida</p>
-                                        <p className="text-4xl font-serif text-terracotta">€{recommendedPrice.toFixed(2)}</p>
+                                        <p className="text-4xl font-serif text-terracotta font-bold">€{recommendedPrice.toFixed(2)}</p>
                                     </div>
-                                    <span className="material-symbols-outlined text-4xl text-terracotta/20">star</span>
+                                    <span className="material-symbols-outlined text-4xl text-terracotta/40">star</span>
                                 </div>
                             </div>
                         </div>
@@ -273,7 +299,7 @@ export default function RecipeDetail() {
                 <div className="max-w-[1400px] mx-auto px-12">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-16 items-start">
                         <div>
-                            <h2 className="text-3xl font-serif italic mb-6">La Boutique <span className="text-terracotta">Sucrée</span></h2>
+                            <h2 className="text-3xl font-serif italic mb-6">Zoe es <span className="text-terracotta">Pendeja</span></h2>
                             <p className="text-white/50 text-sm leading-relaxed max-w-xs italic">Gestión del gusto a través de la precisión.</p>
                         </div>
                         <div className="flex flex-col gap-4">
@@ -287,7 +313,7 @@ export default function RecipeDetail() {
                         </div>
                     </div>
                     <div className="mt-20 pt-10 border-t border-white/10 flex flex-col md:flex-row justify-between gap-6 items-center">
-                        <span className="text-white/30 text-xs tracking-widest uppercase">© 2024 La Boutique Sucrée</span>
+                        <span className="text-white/30 text-xs tracking-widest uppercase">© 2026 Zoe es pendeja</span>
                     </div>
                 </div>
             </footer>

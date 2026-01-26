@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+// Link removed as it is unused
 import { getIngredients, createIngredient, updateIngredient, deleteIngredient } from './lib/api';
 import type { Ingredient } from './lib/database.types';
 import { UNITS, calculateStandardCost, getUnitType } from './lib/conversions';
+import Header from './components/Header';
 
 export default function IngredientsCatalog() {
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -144,33 +145,37 @@ export default function IngredientsCatalog() {
         }
     };
 
-    const filteredIngredients = filter === 'Todos'
-        ? ingredients
-        : ingredients.filter(i => i.category === filter);
+    const [vendorFilter, setVendorFilter] = useState('Todos');
+
+    // Get unique vendors
+    const vendors = ['Todos', ...Array.from(new Set(ingredients.map(i => i.vendor).filter(Boolean)))];
+
+    const filteredIngredients = ingredients.filter(ing => {
+        const matchCategory = filter === 'Todos' || ing.category === filter;
+        const matchVendor = vendorFilter === 'Todos' || ing.vendor === vendorFilter;
+        return matchCategory && matchVendor;
+    });
 
     return (
         <div className="min-h-screen selection:bg-terracotta/20 bg-[#FCF9F3]">
             {/* Header - Consistent with others */}
-            <header className="w-full px-8 py-6 flex justify-between items-center border-b border-terracotta/10 bg-cream/80 backdrop-blur-md sticky top-0 z-50">
-                <Link to="/" className="flex items-center gap-2 cursor-pointer">
-                    <span className="material-symbols-outlined text-terracotta text-3xl">restaurant_menu</span>
-                    <h1 className="text-2xl font-black tracking-tight text-stone">Zoe es <span className="text-terracotta italic">Pendeja</span></h1>
-                </Link>
-                <nav className="hidden md:flex items-center gap-12 font-sans text-sm uppercase tracking-[0.2em] font-medium text-stone/70">
-                    <Link to="/" className="hover:text-terracotta transition-colors">Recetas</Link>
-                    <a className="hover:text-terracotta transition-colors" href="#">Precios</a>
-                    <Link to="/materiaprima" className="text-terracotta border-b border-terracotta">Materia Prima</Link>
-                </nav>
-                <div className="flex items-center gap-6">
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-terracotta text-white rounded-full hover:bg-terracotta/90 transition-all shadow-lg shadow-terracotta/20 text-sm font-semibold tracking-wide">
-                        <span className="material-symbols-outlined">download</span>
-                        EXPORTAR
-                    </button>
-                    <div className="size-10 rounded-full border-2 border-terracotta/20 p-0.5">
-                        <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQLsz3M05NHMurGr2XdE5ytIyWJTGQb0UCDYt6ZrH8hjHTs_auB2Z1UXcs1XM4gCbP321jGNN2he-o-Bj3POhpp-57tS1HrIJTmZZLE17eYVInXDVexgBt_FgXpw1G0SBWimYaLpCO_5c5AyFe5ktWdhV6WkmlA98eybJHGLz_UzzyBaNcnXIb-g9SyGjmroPg3MwrilIAIhuuzbtpnzy-5rnULhDI3XP50L8gtW-JjRLQTqDjrGZXEBL_cqmA1bvhsj5SMAGOMME")' }}></div>
-                    </div>
-                </div>
-            </header>
+            <Header
+                actions={
+                    <>
+                        <button
+                            onClick={openCreateModal}
+                            className="bg-sage text-white px-4 py-2 rounded-full font-bold uppercase tracking-widest hover:bg-sage/90 transition-all flex items-center gap-2 shadow-xl shadow-sage/20 text-xs md:text-sm"
+                        >
+                            <span className="material-symbols-outlined text-base">add_circle</span>
+                            <span className="hidden md:inline">Nuevo Ingrediente</span>
+                            <span className="md:hidden">Nuevo</span>
+                        </button>
+                        <div className="size-8 md:size-10 rounded-full border-2 border-terracotta/20 p-0.5 hidden md:block">
+                            <div className="w-full h-full rounded-full bg-cover bg-center" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQLsz3M05NHMurGr2XdE5ytIyWJTGQb0UCDYt6ZrH8hjHTs_auB2Z1UXcs1XM4gCbP321jGNN2he-o-Bj3POhpp-57tS1HrIJTmZZLE17eYVInXDVexgBt_FgXpw1G0SBWimYaLpCO_5c5AyFe5ktWdhV6WkmlA98eybJHGLz_UzzyBaNcnXIb-g9SyGjmroPg3MwrilIAIhuuzbtpnzy-5rnULhDI3XP50L8gtW-JjRLQTqDjrGZXEBL_cqmA1bvhsj5SMAGOMME")' }}></div>
+                        </div>
+                    </>
+                }
+            />
 
             <main className="max-w-[1400px] mx-auto px-4 md:px-12 py-12">
                 <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
@@ -179,30 +184,56 @@ export default function IngredientsCatalog() {
                         <h2 className="text-5xl font-black italic text-stone mb-4 font-serif">Catálogo de Materias Primas</h2>
                         <p className="text-stone/60 font-serif italic text-lg">Un registro artesanal de nuestros ingredientes esenciales y sus fluctuaciones de mercado.</p>
                     </div>
-                    <button
-                        onClick={openCreateModal}
-                        className="bg-sage text-white px-8 py-4 rounded-full font-bold uppercase tracking-widest hover:bg-sage/90 transition-all flex items-center gap-2 shadow-xl shadow-sage/20"
-                    >
-                        <span className="material-symbols-outlined">add_circle</span>
-                        Nuevo Ingrediente
-                    </button>
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-wrap gap-4 mb-12 border-b border-stone/10 pb-8">
-                    <span className="text-xs font-bold tracking-widest uppercase text-stone/40 self-center mr-4">Filtrar por:</span>
-                    {categories.map(cat => (
+                <div className="flex flex-col md:flex-row gap-6 mb-12 border-b border-stone/10 pb-8 items-start md:items-center">
+                    <span className="text-xs font-bold tracking-widest uppercase text-stone/40 self-center mr-4 hidden md:block">Filtrar por:</span>
+
+                    <div className="w-full md:w-auto flex flex-col gap-2">
+                        <label className="text-[10px] font-bold tracking-widest uppercase text-stone/40 ml-2 md:hidden">Categoría</label>
+                        <div className="relative">
+                            <select
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                                className="w-full md:w-48 appearance-none bg-white border border-stone/20 rounded-full pl-12 pr-6 py-3 text-xs font-bold tracking-widest uppercase text-stone focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all cursor-pointer hover:border-stone/40"
+                            >
+                                {categories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone/40 pointer-events-none text-lg">category</span>
+                            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-stone/40 pointer-events-none text-lg md:hidden">expand_more</span>
+                        </div>
+                    </div>
+
+                    <div className="w-full md:w-auto flex flex-col gap-2">
+                        <label className="text-[10px] font-bold tracking-widest uppercase text-stone/40 ml-2 md:hidden">Proveedor</label>
+                        <div className="relative">
+                            <select
+                                value={vendorFilter}
+                                onChange={(e) => setVendorFilter(e.target.value)}
+                                className="w-full md:w-48 appearance-none bg-white border border-stone/20 rounded-full pl-12 pr-6 py-3 text-xs font-bold tracking-widest uppercase text-stone focus:outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta transition-all cursor-pointer hover:border-stone/40"
+                            >
+                                {vendors.map(vendor => (
+                                    <option key={vendor} value={vendor}>{vendor}</option>
+                                ))}
+                            </select>
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-stone/40 pointer-events-none text-lg">store</span>
+                            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-stone/40 pointer-events-none text-lg md:hidden">expand_more</span>
+                        </div>
+                    </div>
+
+                    {/* Active Filters Reset */}
+                    {(filter !== 'Todos' || vendorFilter !== 'Todos') && (
                         <button
-                            key={cat}
-                            onClick={() => setFilter(cat)}
-                            className={`px-6 py-2 rounded-full text-xs font-bold tracking-widest uppercase transition-all ${filter === cat
-                                ? 'bg-stone text-white'
-                                : 'bg-cream text-stone/60 hover:bg-stone/10'
-                                }`}
+                            onClick={() => { setFilter('Todos'); setVendorFilter('Todos'); }}
+                            className="bg-stone text-white rounded-full p-2 hover:bg-terracotta transition-colors self-end md:self-center"
+                            title="Limpiar filtros"
                         >
-                            {cat}
+                            <span className="material-symbols-outlined text-sm">filter_alt_off</span>
                         </button>
-                    ))}
+                    )}
                 </div>
 
                 {/* Error message */}
@@ -332,13 +363,23 @@ export default function IngredientsCatalog() {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold tracking-widest uppercase text-stone/40 mb-2">Proveedor</label>
-                                        <input
-                                            type="text"
-                                            className="w-full bg-white border border-stone/20 rounded-xl px-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif"
-                                            placeholder="Ej. Molinos Sur"
-                                            value={newIng.vendor}
-                                            onChange={e => setNewIng({ ...newIng, vendor: e.target.value })}
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                list="vendor-options"
+                                                className="w-full bg-white border border-stone/20 rounded-xl pl-10 pr-4 py-3 text-stone focus:outline-none focus:border-terracotta transition-colors font-serif"
+                                                placeholder="Seleccionar o escribir nuevo..."
+                                                value={newIng.vendor}
+                                                onChange={e => setNewIng({ ...newIng, vendor: e.target.value })}
+                                            />
+                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone/30 text-lg">store</span>
+                                            <datalist id="vendor-options">
+                                                {vendors.filter(v => v !== 'Todos').map(v => (
+                                                    <option key={v} value={v} />
+                                                ))}
+                                            </datalist>
+                                        </div>
+                                        <p className="text-[10px] text-stone/40 mt-1 ml-2 italic">Puedes seleccionar uno existente o escribir uno nuevo</p>
                                     </div>
                                 </div>
 
